@@ -1,0 +1,8 @@
+{
+	"InstallScripts" : 
+	[
+		"C:/Users/Florian/Documents/FDCAN-NUCLEO-H723ZG/nucleo-FDCAN/build/Release/cmake_install.cmake",
+		"C:/Users/Florian/Documents/FDCAN-NUCLEO-H723ZG/nucleo-FDCAN/build/Release/cmake/stm32cubemx/cmake_install.cmake"
+	],
+	"Parallel" : false
+}
