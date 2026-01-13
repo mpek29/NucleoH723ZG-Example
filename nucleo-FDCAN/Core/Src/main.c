@@ -137,7 +137,9 @@ int main(void)
   TxHeader.DataLength = FDCAN_DLC_BYTES_8;
   TxHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
   TxHeader.BitRateSwitch = FDCAN_BRS_OFF;
-  TxHeader.FDFormat = FDCAN_FD_CAN;
+  // FDCAN_CLASSIC_CAN: Standard CAN 2.0 frame (no CAN FD features)
+  // FDCAN_FD_CAN: CAN FD frame (allows flexible data rate and larger payloads)
+  TxHeader.FDFormat = FDCAN_CLASSIC_CAN;
   TxHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
   TxHeader.MessageMarker = 0;
 
@@ -246,7 +248,26 @@ static void MX_FDCAN1_Init(void)
   /* USER CODE END FDCAN1_Init 0 */
 
   /* USER CODE BEGIN FDCAN1_Init 1 */
+  
 
+  // Set StdFiltersNbr and RxFifo0ElmtsNbr to at least 1 to enable reception:
+  // If StdFiltersNbr = 0 and RxFifo0ElmtsNbr = 0, no standard filter is allocated and RX FIFO0 is not available,
+  // so received messages will be discarded even if a filter is configured later. Set both to 1 (or more)
+  // to ensure the filter and RX FIFO0 are usable for message reception.
+
+  /*
+   * Recommended CAN bit timing for better reliability:
+   *   NominalPrescaler = 3
+   *   NominalTimeSeg1 = 12
+   *   NominalTimeSeg2 = 3
+   * This ensures both segments are >1 TQ, allowing proper phase error correction and protocol robustness.
+   * These values are more typical for standard CAN baud rates and avoid protocol errors seen with minimal segment values.
+   *
+   * Avoid setting NominalTimeSeg2 = 1 (1 TQ):
+   * A time segment of only 1 time quantum (TQ) leaves no margin for phase error correction and can cause protocol errors or reduce robustness.
+   * Both TimeSeg1 and TimeSeg2 should be at least 2 TQ for reliable CAN communication, as per the CAN protocol recommendations.
+   */
+  
   /* USER CODE END FDCAN1_Init 1 */
   hfdcan1.Instance = FDCAN1;
   hfdcan1.Init.FrameFormat = FDCAN_FRAME_CLASSIC;
@@ -254,18 +275,18 @@ static void MX_FDCAN1_Init(void)
   hfdcan1.Init.AutoRetransmission = DISABLE;
   hfdcan1.Init.TransmitPause = DISABLE;
   hfdcan1.Init.ProtocolException = DISABLE;
-  hfdcan1.Init.NominalPrescaler = 11;
+  hfdcan1.Init.NominalPrescaler = 3;
   hfdcan1.Init.NominalSyncJumpWidth = 1;
-  hfdcan1.Init.NominalTimeSeg1 = 8;
-  hfdcan1.Init.NominalTimeSeg2 = 1;
+  hfdcan1.Init.NominalTimeSeg1 = 12;
+  hfdcan1.Init.NominalTimeSeg2 = 3;
   hfdcan1.Init.DataPrescaler = 11;
   hfdcan1.Init.DataSyncJumpWidth = 1;
   hfdcan1.Init.DataTimeSeg1 = 8;
   hfdcan1.Init.DataTimeSeg2 = 1;
   hfdcan1.Init.MessageRAMOffset = 0;
-  hfdcan1.Init.StdFiltersNbr = 0;
+  hfdcan1.Init.StdFiltersNbr = 1;
   hfdcan1.Init.ExtFiltersNbr = 0;
-  hfdcan1.Init.RxFifo0ElmtsNbr = 0;
+  hfdcan1.Init.RxFifo0ElmtsNbr = 1;
   hfdcan1.Init.RxFifo0ElmtSize = FDCAN_DATA_BYTES_8;
   hfdcan1.Init.RxFifo1ElmtsNbr = 8;
   hfdcan1.Init.RxFifo1ElmtSize = FDCAN_DATA_BYTES_8;
