@@ -29,6 +29,8 @@
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
+const char* get_fdcan_error_string(FDCAN_HandleTypeDef *hfdcan);
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -44,13 +46,14 @@
 /* Private variables ---------------------------------------------------------*/
 
 FDCAN_HandleTypeDef hfdcan1;
+FDCAN_HandleTypeDef hfdcan2;
 
 UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
 FDCAN_TxHeaderTypeDef TxHeader;
 FDCAN_RxHeaderTypeDef RxHeader;
-uint8_t TxData[] = "Hello CAN!";
+uint8_t TxData[] = "Hi CAN !";
 uint8_t RxData[8];
 
 int __io_putchar(int ch) {
@@ -65,7 +68,7 @@ static void MPU_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_FDCAN1_Init(void);
 static void MX_USART3_UART_Init(void);
-const char* get_fdcan_error_string(FDCAN_HandleTypeDef *hfdcan);
+static void MX_FDCAN2_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -109,10 +112,11 @@ int main(void)
   MX_GPIO_Init();
   MX_FDCAN1_Init();
   MX_USART3_UART_Init();
+  MX_FDCAN2_Init();
   /* USER CODE BEGIN 2 */
-  printf("\r\n--- FDCAN Internal Loopback Test (FDCAN1) ---\r\n");
+  printf("\r\n--- FDCAN Test ---\r\n");
 
-  /* 1. Configure Filter for FDCAN1 (to hear itself) */
+  /* 1. Configure Filter */
   FDCAN_FilterTypeDef sFilterConfig;
   sFilterConfig.IdType = FDCAN_STANDARD_ID;
   sFilterConfig.FilterIndex = 0;
@@ -125,9 +129,17 @@ int main(void)
       printf("Error: Filter Config FDCAN1 failed\r\n");
   }
 
-  /* 2. Start FDCAN1 */
+  if (HAL_FDCAN_ConfigFilter(&hfdcan2, &sFilterConfig) != HAL_OK) {
+      printf("Error: Filter Config FDCAN2 failed\r\n");
+  }
+
+  /* 2. Start FDCAN */
   if (HAL_FDCAN_Start(&hfdcan1) != HAL_OK) {
       printf("Error: FDCAN1 Start failed\r\n");
+  }
+
+  if (HAL_FDCAN_Start(&hfdcan2) != HAL_OK) {
+      printf("Error: FDCAN2 Start failed\r\n");
   }
 
   /* 3. Prepare Tx Header */
@@ -144,22 +156,22 @@ int main(void)
   TxHeader.MessageMarker = 0;
 
   /* 4. Send Message from FDCAN1 */
-  printf("FDCAN1 sending message to itself...\r\n");
+  printf("FDCAN1 sending message to FDCAN2...\r\n");
     if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, TxData) != HAL_OK) {
       printf("Error: Send failed (%s)\r\n", get_fdcan_error_string(&hfdcan1));
     }
 
-  /* 5. Read Message on FDCAN1 */
+  /* 5. Read Message on FDCAN2 */
   HAL_Delay(100); // Wait for internal loopback processing
 
-  if (HAL_FDCAN_GetRxFifoFillLevel(&hfdcan1, FDCAN_RX_FIFO0) > 0) {
-      if (HAL_FDCAN_GetRxMessage(&hfdcan1, FDCAN_RX_FIFO0, &RxHeader, RxData) == HAL_OK) {
-          printf("FDCAN1 received message:\r\n");
+  if (HAL_FDCAN_GetRxFifoFillLevel(&hfdcan2, FDCAN_RX_FIFO0) > 0) {
+      if (HAL_FDCAN_GetRxMessage(&hfdcan2, FDCAN_RX_FIFO0, &RxHeader, RxData) == HAL_OK) {
+          printf("FDCAN2 received message:\r\n");
           printf("ID: 0x%03lX\r\n", (unsigned long)RxHeader.Identifier);
           printf("Data: %.8s\r\n", (char*)RxData);
       }
   } else {
-      printf("Error: No message received on FDCAN1\r\n");
+      printf("Error: No message received on FDCAN2\r\n");
   }
   /* USER CODE END 2 */
 
@@ -271,7 +283,7 @@ static void MX_FDCAN1_Init(void)
   /* USER CODE END FDCAN1_Init 1 */
   hfdcan1.Instance = FDCAN1;
   hfdcan1.Init.FrameFormat = FDCAN_FRAME_CLASSIC;
-  hfdcan1.Init.Mode = FDCAN_MODE_INTERNAL_LOOPBACK;
+  hfdcan1.Init.Mode = FDCAN_MODE_NORMAL;
   hfdcan1.Init.AutoRetransmission = DISABLE;
   hfdcan1.Init.TransmitPause = DISABLE;
   hfdcan1.Init.ProtocolException = DISABLE;
@@ -304,6 +316,59 @@ static void MX_FDCAN1_Init(void)
   /* USER CODE BEGIN FDCAN1_Init 2 */
 
   /* USER CODE END FDCAN1_Init 2 */
+
+}
+
+/**
+  * @brief FDCAN2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_FDCAN2_Init(void)
+{
+
+  /* USER CODE BEGIN FDCAN2_Init 0 */
+
+  /* USER CODE END FDCAN2_Init 0 */
+
+  /* USER CODE BEGIN FDCAN2_Init 1 */
+
+  /* USER CODE END FDCAN2_Init 1 */
+  hfdcan2.Instance = FDCAN2;
+  hfdcan2.Init.FrameFormat = FDCAN_FRAME_CLASSIC;
+  hfdcan2.Init.Mode = FDCAN_MODE_NORMAL;
+  hfdcan2.Init.AutoRetransmission = DISABLE;
+  hfdcan2.Init.TransmitPause = DISABLE;
+  hfdcan2.Init.ProtocolException = DISABLE;
+  hfdcan2.Init.NominalPrescaler = 3;
+  hfdcan2.Init.NominalSyncJumpWidth = 1;
+  hfdcan2.Init.NominalTimeSeg1 = 12;
+  hfdcan2.Init.NominalTimeSeg2 = 3;
+  hfdcan2.Init.DataPrescaler = 11;
+  hfdcan2.Init.DataSyncJumpWidth = 1;
+  hfdcan2.Init.DataTimeSeg1 = 8;
+  hfdcan2.Init.DataTimeSeg2 = 1;
+  hfdcan2.Init.MessageRAMOffset = 0;
+  hfdcan2.Init.StdFiltersNbr = 1;
+  hfdcan2.Init.ExtFiltersNbr = 0;
+  hfdcan2.Init.RxFifo0ElmtsNbr = 1;
+  hfdcan2.Init.RxFifo0ElmtSize = FDCAN_DATA_BYTES_8;
+  hfdcan2.Init.RxFifo1ElmtsNbr = 8;
+  hfdcan2.Init.RxFifo1ElmtSize = FDCAN_DATA_BYTES_8;
+  hfdcan2.Init.RxBuffersNbr = 0;
+  hfdcan2.Init.RxBufferSize = FDCAN_DATA_BYTES_8;
+  hfdcan2.Init.TxEventsNbr = 0;
+  hfdcan2.Init.TxBuffersNbr = 24;
+  hfdcan2.Init.TxFifoQueueElmtsNbr = 8;
+  hfdcan2.Init.TxFifoQueueMode = FDCAN_TX_FIFO_OPERATION;
+  hfdcan2.Init.TxElmtSize = FDCAN_DATA_BYTES_8;
+  if (HAL_FDCAN_Init(&hfdcan2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN FDCAN2_Init 2 */
+
+  /* USER CODE END FDCAN2_Init 2 */
 
 }
 
