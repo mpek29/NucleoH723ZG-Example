@@ -36,7 +36,7 @@ const char* get_fdcan_error_string(FDCAN_HandleTypeDef *hfdcan);
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define MAIN1
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -115,13 +115,13 @@ int main(void)
   MX_USART3_UART_Init();
   MX_FDCAN2_Init();
   /* USER CODE BEGIN 2 */
-
+#ifdef MAIN1
   printf("\r\n--- FDCAN Test ---\r\n");
   fdcan_start(&hfdcan1, &hfdcan2);
   fdcan_prepare_tx_header(&TxHeader);
   fdcan_send_message(&hfdcan1, &TxHeader, TxData, get_fdcan_error_string);
   fdcan_read_message(&hfdcan2, &RxHeader, RxData);
-  
+#endif /* MAIN1 */
   /* USER CODE END 2 */
 
   /* Infinite loop */
