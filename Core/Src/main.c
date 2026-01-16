@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include "stm32h7xx_hal_fdcan.h"
 #include "stm32h7xx_hal_uart.h"
+#include "fdcan.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -114,65 +115,13 @@ int main(void)
   MX_USART3_UART_Init();
   MX_FDCAN2_Init();
   /* USER CODE BEGIN 2 */
+
   printf("\r\n--- FDCAN Test ---\r\n");
-
-  /* 1. Configure Filter */
-  FDCAN_FilterTypeDef sFilterConfig;
-  sFilterConfig.IdType = FDCAN_STANDARD_ID;
-  sFilterConfig.FilterIndex = 0;
-  sFilterConfig.FilterType = FDCAN_FILTER_RANGE;
-  sFilterConfig.FilterConfig = FDCAN_FILTER_TO_RXFIFO0;
-  sFilterConfig.FilterID1 = 0x000;
-  sFilterConfig.FilterID2 = 0x7FF; 
-
-  if (HAL_FDCAN_ConfigFilter(&hfdcan1, &sFilterConfig) != HAL_OK) {
-      printf("Error: Filter Config FDCAN1 failed\r\n");
-  }
-
-  if (HAL_FDCAN_ConfigFilter(&hfdcan2, &sFilterConfig) != HAL_OK) {
-      printf("Error: Filter Config FDCAN2 failed\r\n");
-  }
-
-  /* 2. Start FDCAN */
-  if (HAL_FDCAN_Start(&hfdcan1) != HAL_OK) {
-      printf("Error: FDCAN1 Start failed\r\n");
-  }
-
-  if (HAL_FDCAN_Start(&hfdcan2) != HAL_OK) {
-      printf("Error: FDCAN2 Start failed\r\n");
-  }
-
-  /* 3. Prepare Tx Header */
-  TxHeader.Identifier = 0x123;
-  TxHeader.IdType = FDCAN_STANDARD_ID;
-  TxHeader.TxFrameType = FDCAN_DATA_FRAME;
-  TxHeader.DataLength = FDCAN_DLC_BYTES_8;
-  TxHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
-  TxHeader.BitRateSwitch = FDCAN_BRS_OFF;
-  // FDCAN_CLASSIC_CAN: Standard CAN 2.0 frame (no CAN FD features)
-  // FDCAN_FD_CAN: CAN FD frame (allows flexible data rate and larger payloads)
-  TxHeader.FDFormat = FDCAN_CLASSIC_CAN;
-  TxHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
-  TxHeader.MessageMarker = 0;
-
-  /* 4. Send Message from FDCAN1 */
-  printf("FDCAN1 sending message to FDCAN2...\r\n");
-    if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, TxData) != HAL_OK) {
-      printf("Error: Send failed (%s)\r\n", get_fdcan_error_string(&hfdcan1));
-    }
-
-  /* 5. Read Message on FDCAN2 */
-  HAL_Delay(100); // Wait for internal loopback processing
-
-  if (HAL_FDCAN_GetRxFifoFillLevel(&hfdcan2, FDCAN_RX_FIFO0) > 0) {
-      if (HAL_FDCAN_GetRxMessage(&hfdcan2, FDCAN_RX_FIFO0, &RxHeader, RxData) == HAL_OK) {
-          printf("FDCAN2 received message:\r\n");
-          printf("ID: 0x%03lX\r\n", (unsigned long)RxHeader.Identifier);
-          printf("Data: %.8s\r\n", (char*)RxData);
-      }
-  } else {
-      printf("Error: No message received on FDCAN2\r\n");
-  }
+  fdcan_start(&hfdcan1, &hfdcan2);
+  fdcan_prepare_tx_header(&TxHeader);
+  fdcan_send_message(&hfdcan1, &TxHeader, TxData, get_fdcan_error_string);
+  fdcan_read_message(&hfdcan2, &RxHeader, RxData);
+  
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -454,7 +403,6 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
 const char* get_fdcan_error_string(FDCAN_HandleTypeDef *hfdcan)
 {
   switch(hfdcan->ErrorCode)
